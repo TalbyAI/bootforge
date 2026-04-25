@@ -1,5 +1,6 @@
 import { Command } from 'commander';
 import enquirer from 'enquirer';
+import packageJson from '../package.json' with { type: 'json' };
 
 import { runAdd } from './commands/add.js';
 import { runDoctor, type CommonCommandOptions } from './commands/doctor.js';
@@ -30,7 +31,7 @@ export function createProgram(): Command {
   program
     .name('bootforge')
     .description('Apply reusable project setup modules across .NET and TypeScript repositories.')
-    .version('0.1.0');
+    .version(packageJson.version);
 
   defineCommand(program, 'init', 'Initialize Bootforge for a target repository.', runInit);
   defineCommand(program, 'add', 'Add one or more setup modules to a repository.', runAdd);
