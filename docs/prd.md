@@ -159,8 +159,11 @@ The market already contains adjacent tools for scaffolding, template rendering, 
 
 - Each project may use exactly one Bootforge state location.
 - When `bootforge init` runs in a repository without `package.json`, it should create a dedicated `.bootforge.yaml` file.
-- When `bootforge init` runs in a repository that already has `package.json`, it should ask whether to store Bootforge state in `package.json` under a dedicated `bootforge` section or in `.bootforge.yaml`.
-- Bootforge should not allow multiple active state locations in the same project.
+- When `bootforge init` runs in a repository that already has `package.json`, it should ask whether to store Bootforge state in `package.json` under a dedicated `bootforge` section or in `.bootforge.yaml` only when `--state-location` is not provided.
+- The `bootforge init` command should accept `--state-location <package.json|.bootforge.yaml>`, validate that the supplied value is one of those two options, and use it to choose the storage target without prompting.
+- Bootforge should not allow multiple active state locations in the same project; the same conflict checks should run for both interactive and non-interactive init flows, including rejecting `package.json` storage when `.bootforge.yaml` is already active and rejecting `.bootforge.yaml` storage when `package.json#bootforge` is already active.
+- When conflicting state locations are detected, `bootforge init` should surface a clear error explaining that only one active state location is allowed and identify the conflicting locations.
+- The `bootforge init` help and usage text should document the `--state-location` flag and its supported values.
 - The project state should be machine-owned, schema-versioned, and treated as the canonical record of installed Bootforge state for that repository.
 - The project state should record current resolved state only rather than an append-only history log.
 - The top-level project state should record project identity, registered sources, and installed modules.

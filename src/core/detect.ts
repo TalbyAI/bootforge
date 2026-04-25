@@ -4,6 +4,8 @@ import { z } from 'zod';
 
 import type { DetectedProject, ProjectSignal } from '../types.js';
 
+type ReadDirectory = typeof readdir;
+
 const detectedProjectSchema = z.object({
   kind: z.enum(['dotnet', 'typescript', 'mixed', 'unknown']),
   isExistingProject: z.boolean(),
@@ -33,25 +35,27 @@ const LOCKFILE_TO_MANAGER = new Map<string, DetectedProject['packageManager']>([
   ['package-lock.json', 'npm'],
 ]);
 
-export async function detectProject(targetRoot: string): Promise<DetectedProject> {
+export async function detectProject(targetRoot: string, readDirectory: ReadDirectory = readdir): Promise<DetectedProject> {
   const signals = new Set<ProjectSignal>();
 
-  await walk(targetRoot, 0, signals);
-
-  const hasDotNet = signals.has('.sln') || signals.has('.csproj');
-  const hasTypeScript = signals.has('package.json') || signals.has('tsconfig.json');
+  await walk(targetRoot, 0, signals, readDirectory);
 
   const detected: DetectedProject = {
-    kind: hasDotNet && hasTypeScript ? 'mixed' : hasDotNet ? 'dotnet' : hasTypeScript ? 'typescript' : 'unknown',
+    kind: detectProjectKind(signals),
     isExistingProject: signals.size > 0,
     packageManager: detectPackageManager(signals),
-    signals: Array.from(signals).sort(),
+    signals: Array.from(signals).sort((left, right) => left.localeCompare(right)),
   };
 
   return detectedProjectSchema.parse(detected);
 }
 
-async function walk(targetRoot: string, depth: number, signals: Set<ProjectSignal>): Promise<void> {
+async function walk(
+  targetRoot: string,
+  depth: number,
+  signals: Set<ProjectSignal>,
+  readDirectory: ReadDirectory,
+): Promise<void> {
   if (depth > MAX_DEPTH) {
     return;
   }
@@ -59,7 +63,7 @@ async function walk(targetRoot: string, depth: number, signals: Set<ProjectSigna
   let entries;
 
   try {
-    entries = await readdir(targetRoot, { withFileTypes: true });
+    entries = await readDirectory(targetRoot, { withFileTypes: true });
   } catch (error) {
     if (isIgnorableReadError(error)) {
       return;
@@ -74,7 +78,7 @@ async function walk(targetRoot: string, depth: number, signals: Set<ProjectSigna
         continue;
       }
 
-      await walk(path.join(targetRoot, entry.name), depth + 1, signals);
+      await walk(path.join(targetRoot, entry.name), depth + 1, signals, readDirectory);
       continue;
     }
 
@@ -111,6 +115,25 @@ function detectPackageManager(signals: Set<ProjectSignal>): DetectedProject['pac
   }
 
   return signals.has('package.json') ? 'npm' : null;
+}
+
+function detectProjectKind(signals: Set<ProjectSignal>): DetectedProject['kind'] {
+  const hasDotNet = signals.has('.sln') || signals.has('.csproj');
+  const hasTypeScript = signals.has('package.json') || signals.has('tsconfig.json');
+
+  if (hasDotNet && hasTypeScript) {
+    return 'mixed';
+  }
+
+  if (hasDotNet) {
+    return 'dotnet';
+  }
+
+  if (hasTypeScript) {
+    return 'typescript';
+  }
+
+  return 'unknown';
 }
 
 function isIgnorableReadError(error: unknown): error is NodeJS.ErrnoException {
