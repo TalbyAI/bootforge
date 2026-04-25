@@ -61,7 +61,7 @@ async function walk(targetRoot: string, depth: number, signals: Set<ProjectSigna
   try {
     entries = await readdir(targetRoot, { withFileTypes: true });
   } catch (error) {
-    if (isEnoentError(error)) {
+    if (isIgnorableReadError(error)) {
       return;
     }
 
@@ -113,6 +113,10 @@ function detectPackageManager(signals: Set<ProjectSignal>): DetectedProject['pac
   return signals.has('package.json') ? 'npm' : null;
 }
 
-function isEnoentError(error: unknown): error is NodeJS.ErrnoException {
-  return error instanceof Error && 'code' in error && error.code === 'ENOENT';
+function isIgnorableReadError(error: unknown): error is NodeJS.ErrnoException {
+  return (
+    error instanceof Error &&
+    'code' in error &&
+    (error.code === 'ENOENT' || error.code === 'EACCES' || error.code === 'EPERM' || error.code === 'ENOTDIR')
+  );
 }

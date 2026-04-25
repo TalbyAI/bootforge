@@ -1,6 +1,7 @@
 import path from 'node:path';
+import * as fs from 'node:fs/promises';
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { detectProject } from '../src/core/detect.js';
 
@@ -45,5 +46,20 @@ describe('detectProject', () => {
     expect(result.kind).toBe('unknown');
     expect(result.signals).toEqual([]);
     expect(result.isExistingProject).toBe(false);
+  });
+
+  it('treats an unreadable directory as an unknown repository', async () => {
+    const readdirSpy = vi.spyOn(fs, 'readdir').mockRejectedValueOnce(
+      Object.assign(new Error('permission denied'), { code: 'EACCES' }),
+    );
+
+    await expect(detectProject(path.join(fixturesRoot, 'empty'))).resolves.toMatchObject({
+      kind: 'unknown',
+      signals: [],
+      isExistingProject: false,
+      packageManager: null,
+    });
+
+    readdirSpy.mockRestore();
   });
 });

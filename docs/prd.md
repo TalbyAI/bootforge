@@ -139,7 +139,10 @@ The market already contains adjacent tools for scaffolding, template rendering, 
 - Users may provide a tag or commit when registering a source, but Bootforge must resolve that input to an exact commit SHA and persist both the requested ref and the resolved commit.
 - External sources should be retrieved through the system `git` CLI for clone and fetch operations.
 - After retrieval, Bootforge should read module content from a normalized local cache layer rather than directly from live git operations.
-- The local source cache should live outside project repositories in a user-global cache directory keyed by source URL and resolved commit.
+- The local source cache should live outside project repositories in a user-global cache directory at `$XDG_CACHE_HOME/bootforge/sources/` with a fallback to `~/.cache/bootforge/sources/` when `XDG_CACHE_HOME` is unset.
+- Cache entries should be keyed by a stable hash of the source URL and the resolved commit SHA, for example as `<cache-root>/<source-url-hash>/<resolved-commit-sha>/`.
+- Example cached source path: `~/.cache/bootforge/sources/9f3c2d7a4b6e1c8f/4d2e8a1b6c9f0e3d5a7b1c2d3e4f5a6b7c8d9e0f/`.
+- This cache location is where Bootforge should perform git clone and fetch operations for external sources so consumers can inspect or troubleshoot cached source state directly.
 - Local filesystem module sources are allowed for development and private reuse, but they are non-reproducible and must not be written into committed project state unless converted to a pinned git source.
 
 ### External catalog layout and schema

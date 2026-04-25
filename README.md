@@ -51,6 +51,9 @@ node dist/cli.js doctor --target ../some-repo --json
 
 # Run the reserved init flow against a target
 node dist/cli.js init --target ../some-repo
+
+# Pick the init state location without an interactive prompt
+node dist/cli.js init --target ../some-repo --state-location .bootforge.yaml
 ```
 
 ## Verification
