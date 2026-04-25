@@ -1,8 +1,8 @@
 # Product Requirements Document — Project Bootstrap CLI
 
-**Version:** 1.0  
-**Date:** 2026-04-25  
-**Owner:** Iskander Sierra  
+**Version:** 1.0
+**Date:** 2026-04-25
+**Owner:** Iskander Sierra
 **Status:** Draft
 
 ---
@@ -109,6 +109,68 @@ The market already contains adjacent tools for scaffolding, template rendering, 
 - The first release avoids agent-driven mutation and keeps the write path deterministic.
 - Agent-assisted file updates are explicitly deferred to a later version for unsupported or more complex migrations.
 
+### Runtime and technology choices
+
+- The CLI targets Node 22 or newer in v1.
+- The implementation language is TypeScript with pure ESM output.
+- The primary distribution target is npm so the tool can be invoked through `npx`.
+- The command surface should be built with Commander.
+- Interactive prompting should be built with Enquirer.
+- Runtime schema validation for module definitions, option schemas, source manifests, and project state should be built with Zod.
+- The test stack should use Vitest for unit and integration coverage.
+- Packaging should use tsup to emit the published CLI build.
+
+### Execution model
+
+- Bootforge may mutate files and configuration, but v1 modules do not execute declared commands automatically during apply.
+- When a module requires follow-up commands such as dependency installation, restore, or validation, Bootforge should print those steps explicitly as post-apply guidance.
+- For TypeScript repositories, Bootforge should detect the package manager already in use rather than forcing npm-only behavior.
+- Package manager detection should be based on the target repository state, including lockfiles and workspace metadata where applicable.
+- For .NET repositories, automated command integration should be constrained to the `dotnet` CLI and known solution or project patterns.
+- Bootforge should not attempt to infer or run arbitrary wrapper scripts or custom build orchestration in v1.
+
+### External module source model
+
+- Built-in modules ship inside the Bootforge repository and remain available without any external source registration.
+- External module sources must be explicitly registered before use.
+- In v1, remote external sources are limited to registered HTTPS git remotes with a friendly source id.
+- Bootforge should reject ad hoc one-off remote URLs during apply.
+- Source registration is project-scoped in v1 rather than user-global.
+- Users may provide a tag or commit when registering a source, but Bootforge must resolve that input to an exact commit SHA and persist both the requested ref and the resolved commit.
+- External sources should be retrieved through the system `git` CLI for clone and fetch operations.
+- After retrieval, Bootforge should read module content from a normalized local cache layer rather than directly from live git operations.
+- The local source cache should live outside project repositories in a user-global cache directory keyed by source URL and resolved commit.
+- Local filesystem module sources are allowed for development and private reuse, but they are non-reproducible and must not be written into committed project state unless converted to a pinned git source.
+
+### External catalog layout and schema
+
+- A compatible external catalog must expose a fixed Bootforge catalog root containing source metadata and a `modules/` directory.
+- Each module must live in its own folder under `modules/`.
+- Source metadata files and per-module definition files should use YAML.
+- YAML definitions are authoring inputs only; Bootforge must validate them against strict runtime schemas before planning or apply.
+- Both project state schemas and catalog schemas must carry explicit version identifiers.
+- The CLI should support in-place forward migration for known older schema versions.
+- The CLI must refuse apply when it encounters a newer unknown state or catalog schema version.
+
+### Project state format
+
+- Each project may use exactly one Bootforge state location.
+- When `bootforge init` runs in a repository without `package.json`, it should create a dedicated `.bootforge.yaml` file.
+- When `bootforge init` runs in a repository that already has `package.json`, it should ask whether to store Bootforge state in `package.json` under a dedicated `bootforge` section or in `.bootforge.yaml`.
+- Bootforge should not allow multiple active state locations in the same project.
+- The project state should be machine-owned, schema-versioned, and treated as the canonical record of installed Bootforge state for that repository.
+- The project state should record current resolved state only rather than an append-only history log.
+- The top-level project state should record project identity, registered sources, and installed modules.
+- Each installed module entry should record at least the module id, source id, requested ref, resolved commit, module version, selected options, install status, and last-applied Bootforge version.
+
+### Mutation and doctor boundaries
+
+- First-class structured mutation support in v1 should cover JSON, YAML, and XML.
+- Managed text blocks remain the fallback only for CLI-owned regions in partially shared files.
+- Unsupported file mutations should be surfaced explicitly in the plan rather than silently approximated.
+- The `doctor` command should verify the Node runtime version, `git` availability, target repository git safety state, project state validity, source registration validity, cached source reachability, module schema validity, and required external tools declared by selected modules.
+- `doctor` should remain a readiness and diagnostics command, not a hidden apply or mutation command.
+
 ### Deep modules to build
 
 - **Project detector**: identifies repo type, language mix, tooling shape, and whether the project is new or existing.
@@ -132,6 +194,9 @@ These are intentionally deep modules because each should encapsulate a large amo
 - Safety tests should cover non-git folders, clean repos, dirty repos, untracked files, and explicit override behavior.
 - Interactive and non-interactive paths should be tested against the same option schema expectations.
 - Doctor behavior should be tested around missing prerequisites, invalid module sources, and unsupported target configurations.
+- State tests should cover the `.bootforge.yaml` path, the `package.json#bootforge` path, and rejection of multiple simultaneous state locations.
+- Source tests should cover pinned ref resolution, cache reuse by resolved commit, local-path source restrictions, and rejection of unregistered remote URLs.
+- Compatibility tests should cover schema migration of known older project state and catalog versions, plus safe refusal for newer unknown versions.
 - Good tests should prefer representative fixture projects over heavy mocking when testing detection, planning, and apply behavior.
 - Prior art in the current repo favors behavior-focused end-to-end validation via package scripts and Playwright for user-visible flows, which reinforces the principle of testing outcomes rather than internals.
 - The CLI itself should use a layered test strategy: unit tests for deep modules, fixture-based integration tests for plan and apply behavior, and a small number of command-level smoke tests for the public interface.
