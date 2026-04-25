@@ -56,7 +56,17 @@ async function walk(targetRoot: string, depth: number, signals: Set<ProjectSigna
     return;
   }
 
-  const entries = await readdir(targetRoot, { withFileTypes: true });
+  let entries;
+
+  try {
+    entries = await readdir(targetRoot, { withFileTypes: true });
+  } catch (error) {
+    if (isEnoentError(error)) {
+      return;
+    }
+
+    throw error;
+  }
 
   for (const entry of entries) {
     if (entry.isDirectory()) {
@@ -101,4 +111,8 @@ function detectPackageManager(signals: Set<ProjectSignal>): DetectedProject['pac
   }
 
   return signals.has('package.json') ? 'npm' : null;
+}
+
+function isEnoentError(error: unknown): error is NodeJS.ErrnoException {
+  return error instanceof Error && 'code' in error && error.code === 'ENOENT';
 }

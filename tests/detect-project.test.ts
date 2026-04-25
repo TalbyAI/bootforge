@@ -38,4 +38,12 @@ describe('detectProject', () => {
     expect(result.signals).toEqual([]);
     expect(result.isExistingProject).toBe(false);
   });
+
+  it('treats a missing directory as an unknown repository', async () => {
+    const result = await detectProject(path.join(fixturesRoot, 'missing-directory'));
+
+    expect(result.kind).toBe('unknown');
+    expect(result.signals).toEqual([]);
+    expect(result.isExistingProject).toBe(false);
+  });
 });
