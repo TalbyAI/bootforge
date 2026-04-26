@@ -1,9 +1,0 @@
-{
-  "mcpServers": {
-    "context-mode": {
-      "command": "context-mode",
-      "args": [],
-      "directTools": true
-    }
-  }
-}
