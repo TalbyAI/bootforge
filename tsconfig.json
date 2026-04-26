@@ -21,6 +21,6 @@
   "include": [
     "src/**/*.ts",
     "tests/**/*.ts",
-    "tsup.config.ts"
+    "tsdown.config.ts"
   ]
 }

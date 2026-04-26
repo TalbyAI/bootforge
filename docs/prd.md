@@ -118,7 +118,7 @@ The market already contains adjacent tools for scaffolding, template rendering, 
 - Interactive prompting should be built with Enquirer.
 - Runtime schema validation for module definitions, option schemas, source manifests, and project state should be built with Zod.
 - The test stack should use Vitest for unit and integration coverage.
-- Packaging should use tsup to emit the published CLI build.
+- Packaging should use tsdown to emit the published CLI build.
 
 ### Execution model
 
